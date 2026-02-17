@@ -31,14 +31,6 @@ This table maps non-functional requirements from PRD to specific design/architec
 | `cpt-examples-todo-app-nfr-response-time` | UI interactions <200ms p95 | TaskService + IndexedDB | Local-first architecture: all reads from IndexedDB (sub-10ms), writes optimistic with background sync | Performance benchmarks measure p95 latency |
 | `cpt-examples-todo-app-nfr-data-persistence` | Local persist <50ms, cloud sync <5s | SyncService + IndexedDB + REST API | IndexedDB for immediate local persistence; background WebSocket sync with retry queue | Integration tests verify timing + recovery scenarios |
 
-#### Key ADRs
-
-| ADR ID | Decision Summary |
-|--------|------------------|
-| `cpt-examples-todo-app-adr-local-storage` | IndexedDB for offline-first local persistence |
-| `cpt-examples-todo-app-adr-optimistic-ui` | Optimistic UI updates with background reconciliation |
-| `cpt-examples-todo-app-adr-browser-support` | Support latest 2 versions of major browsers |
-
 ### 1.3 Architecture Layers
 
 | Layer | Responsibility | Technology |
