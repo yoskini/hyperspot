@@ -121,7 +121,6 @@ The file-parser module has comprehensive E2E test coverage including golden-refe
 - **`modules/file_parser/test_file_parser_upload_markdown.py`**: Tests the `/file-parser/v1/upload/markdown` endpoint (
   multipart)
 - **`modules/file_parser/test_file_parser_parse_local.py`**: Tests the `/file-parser/v1/parse-local*` endpoints
-- **`modules/file_parser/test_file_parser_parse_url.py`**: Tests the `/file-parser/v1/parse-url*` endpoints
 
 ### Golden Markdown Generation
 

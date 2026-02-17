@@ -32,16 +32,6 @@ pub fn domain_error_to_problem(err: DomainError) -> Problem {
             Problem::new(StatusCode::INTERNAL_SERVER_ERROR, "IO Error", message)
         }
 
-        DomainError::InvalidUrl { url } => Problem::new(
-            StatusCode::BAD_REQUEST,
-            "Invalid URL",
-            format!("Invalid URL: {url}"),
-        ),
-
-        DomainError::DownloadError { message } => {
-            Problem::new(StatusCode::BAD_GATEWAY, "Download Error", message)
-        }
-
         DomainError::InvalidRequest { message } => {
             Problem::new(StatusCode::BAD_REQUEST, "Invalid Request", message)
         }

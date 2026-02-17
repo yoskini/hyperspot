@@ -1024,7 +1024,6 @@ dependencies = [
  "bytes",
  "calamine",
  "cf-modkit",
- "cf-modkit-http",
  "cf-modkit-macros",
  "cf-modkit-security",
  "docx-rust",
@@ -1041,7 +1040,6 @@ dependencies = [
  "tl",
  "tokio",
  "tracing",
- "url",
  "utoipa",
  "uuid",
 ]

@@ -31,7 +31,6 @@ pub struct ParsedMetadata {
 pub enum ParsedSource {
     LocalPath(String),
     Uploaded { original_name: String },
-    Url(String),
 }
 
 /// Inline-level text styling

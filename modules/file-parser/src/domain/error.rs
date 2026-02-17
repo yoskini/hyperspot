@@ -20,12 +20,6 @@ pub enum DomainError {
     #[error("IO error: {message}")]
     IoError { message: String },
 
-    #[error("Invalid URL: {url}")]
-    InvalidUrl { url: String },
-
-    #[error("Download error: {message}")]
-    DownloadError { message: String },
-
     #[error("Invalid request: {message}")]
     InvalidRequest { message: String },
 }
@@ -55,16 +49,6 @@ impl DomainError {
 
     pub fn io_error(message: impl Into<String>) -> Self {
         Self::IoError {
-            message: message.into(),
-        }
-    }
-
-    pub fn invalid_url(url: impl Into<String>) -> Self {
-        Self::InvalidUrl { url: url.into() }
-    }
-
-    pub fn download_error(message: impl Into<String>) -> Self {
-        Self::DownloadError {
             message: message.into(),
         }
     }

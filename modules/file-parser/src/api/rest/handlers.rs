@@ -11,8 +11,7 @@ use std::convert::Infallible;
 use tracing::{field::Empty, info};
 
 use crate::api::rest::dto::{
-    FileParserInfoDto, ParseLocalFileRequest, ParseUrlRequest, ParsedDocResponseDto,
-    ParsedDocumentDto, UploadQuery,
+    FileParserInfoDto, ParseLocalFileRequest, ParsedDocResponseDto, ParsedDocumentDto, UploadQuery,
 };
 use crate::domain::error::DomainError;
 use crate::domain::markdown::MarkdownRenderer;
@@ -149,50 +148,6 @@ pub async fn upload_and_parse(
     Ok(Json(response))
 }
 
-/// Parse a file from a URL
-#[tracing::instrument(
-    skip(svc, req_body, _ctx, query),
-    fields(
-        url = %req_body.url,
-        render_markdown = ?query.render_markdown,
-        request_id = Empty
-    )
-)]
-#[axum::debug_handler]
-pub async fn parse_url(
-    Extension(_ctx): Extension<SecurityContext>,
-    Extension(svc): Extension<std::sync::Arc<FileParserService>>,
-    Query(query): Query<RenderMarkdownQuery>,
-    Json(req_body): Json<ParseUrlRequest>,
-) -> ApiResult<JsonBody<ParsedDocResponseDto>> {
-    let render_md = query.render_markdown.unwrap_or(false);
-
-    info!(
-        url = %req_body.url,
-        render_markdown = render_md,
-        "Parsing file from URL"
-    );
-
-    let url = url::Url::parse(&req_body.url)
-        .map_err(|_| Problem::from(DomainError::invalid_url(req_body.url)))?;
-
-    let document = svc.parse_url(&url).await?;
-
-    // Optionally render markdown
-    let markdown = if render_md {
-        Some(MarkdownRenderer::render(&document))
-    } else {
-        None
-    };
-
-    let response = ParsedDocResponseDto {
-        document: ParsedDocumentDto::from(document),
-        markdown,
-    };
-
-    Ok(Json(response))
-}
-
 /// Parse a local file and stream Markdown response
 #[tracing::instrument(
     skip(svc, req_body, _ctx),
@@ -285,47 +240,6 @@ pub async fn upload_and_parse_markdown(
     );
 
     let document = svc.parse_bytes(Some(&file_name), None, file_bytes).await?;
-
-    // Create streaming response - render_iter takes ownership of document
-    let stream = stream::iter(
-        MarkdownRenderer::render_iter(document)
-            .map(|chunk| Ok::<Bytes, Infallible>(Bytes::from(chunk))),
-    );
-
-    let body = Body::from_stream(stream);
-    let mut resp = Response::new(body);
-    *resp.status_mut() = axum::http::StatusCode::OK;
-    resp.headers_mut().insert(
-        axum::http::header::CONTENT_TYPE,
-        axum::http::HeaderValue::from_static("text/markdown; charset=utf-8"),
-    );
-
-    Ok(resp)
-}
-
-/// Parse a file from a URL and stream Markdown response
-#[tracing::instrument(
-    skip(svc, req_body, _ctx),
-    fields(
-        url = %req_body.url,
-        request_id = Empty
-    )
-)]
-#[axum::debug_handler]
-pub async fn parse_url_markdown(
-    Extension(_ctx): Extension<SecurityContext>,
-    Extension(svc): Extension<std::sync::Arc<FileParserService>>,
-    Json(req_body): Json<ParseUrlRequest>,
-) -> ApiResult<Response> {
-    info!(
-        url = %req_body.url,
-        "Parsing file from URL and streaming Markdown"
-    );
-
-    let url = url::Url::parse(&req_body.url)
-        .map_err(|_| Problem::from(DomainError::invalid_url(req_body.url)))?;
-
-    let document = svc.parse_url(&url).await?;
 
     // Create streaming response - render_iter takes ownership of document
     let stream = stream::iter(

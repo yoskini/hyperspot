@@ -49,8 +49,8 @@ impl Module for FileParserModule {
         // Load module configuration
         let cfg: FileParserConfig = ctx.config()?;
         debug!(
-            "Loaded file-parser config: max_file_size_mb={}, download_timeout_secs={}",
-            cfg.max_file_size_mb, cfg.download_timeout_secs
+            "Loaded file-parser config: max_file_size_mb={}",
+            cfg.max_file_size_mb
         );
 
         // Build parser backends
@@ -71,14 +71,10 @@ impl Module for FileParserModule {
         let service_config = ServiceConfig {
             max_file_size_bytes: usize::try_from(cfg.max_file_size_mb * BYTES_IN_MB)
                 .unwrap_or(usize::MAX),
-            download_timeout_secs: cfg.download_timeout_secs,
         };
 
         // Create file parser service
-        let file_parser_service = Arc::new(
-            FileParserService::new(parsers, service_config)
-                .map_err(|e| anyhow::anyhow!("failed to create FileParserService: {e}"))?,
-        );
+        let file_parser_service = Arc::new(FileParserService::new(parsers, service_config));
 
         // Store service for REST usage
         self.service.store(Some(file_parser_service));

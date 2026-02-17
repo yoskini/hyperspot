@@ -21,7 +21,6 @@
 - Upload and parse documents
 - Extract text, tables, and images
 - Render documents as Markdown
-- Parse documents from URLs
 - Support for both binary upload and multipart form data
 
 ## 2. Actors
@@ -54,16 +53,6 @@
 
 <!-- fdd-id-content -->
 User uploads a document (PDF, DOCX, XLSX, PPTX, or image) and receives parsed content with text, tables, and optional Markdown rendering.
-
-**Actors**: `fdd-file-parser-actor-api-user`
-<!-- fdd-id-content -->
-
-### Parse Document from URL
-
-**ID**: [ ] `p1` `fdd-file-parser-usecase-url-parse-v1`
-
-<!-- fdd-id-content -->
-User provides a document URL and receives parsed content without manual download.
 
 **Actors**: `fdd-file-parser-actor-api-user`
 <!-- fdd-id-content -->
@@ -110,16 +99,6 @@ System SHALL convert documents to Markdown format, preserving headings, lists, f
 **Actors**: `fdd-file-parser-actor-api-user`
 <!-- fdd-id-content -->
 
-### URL Parsing
-
-**ID**: [ ] `p1` `fdd-file-parser-fr-url-v1`
-
-<!-- fdd-id-content -->
-System SHALL parse documents from HTTP/HTTPS URLs with support for authenticated access.
-
-**Actors**: `fdd-file-parser-actor-api-user`
-<!-- fdd-id-content -->
-
 ## 5. Non-Functional Requirements
 
 ### Performance
@@ -160,3 +139,4 @@ System SHALL maintain 99.9% uptime SLA.
 | Date | Version | Author | Changes |
 |------|---------|--------|---------|
 | 2026-02-09 | 0.1.0 | System | Initial PRD for cypilot validation |
+| 2026-02-17 | 0.2.0 | Security | Removed URL parsing capability (use case `fdd-file-parser-usecase-url-parse-v1`, FR `fdd-file-parser-fr-url-v1`). Rationale: SSRF vulnerability (issue #525) — URL parsing allowed server-side requests to arbitrary endpoints, posing an unacceptable security risk. Decision: remove rather than harden. |

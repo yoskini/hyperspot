@@ -17,13 +17,6 @@ pub struct ParseLocalFileRequest {
     pub file_path: String,
 }
 
-/// REST DTO for parse URL request
-#[derive(Debug, Clone)]
-#[modkit_macros::api_dto(request)]
-pub struct ParseUrlRequest {
-    pub url: String,
-}
-
 /// Query parameters for file upload endpoint
 #[derive(Debug, Deserialize)]
 pub struct UploadQuery {
@@ -58,7 +51,6 @@ pub struct ParsedDocMetadataDto {
 pub enum ParsedDocSourceDto {
     LocalPath { path: String },
     Uploaded { original_name: String },
-    Url { url: String },
 }
 
 /// REST DTO for inline text styling

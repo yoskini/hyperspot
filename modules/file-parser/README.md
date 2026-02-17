@@ -22,7 +22,6 @@ modules:
   file-parser:
     config:
       max_file_size_mb: 100
-      download_timeout_secs: 60
 ```
 
 ## License

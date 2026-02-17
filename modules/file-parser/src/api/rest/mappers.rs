@@ -45,7 +45,6 @@ impl From<ir::ParsedSource> for ParsedDocSourceDto {
             ir::ParsedSource::Uploaded { original_name } => {
                 ParsedDocSourceDto::Uploaded { original_name }
             }
-            ir::ParsedSource::Url(url) => ParsedDocSourceDto::Url { url },
         }
     }
 }

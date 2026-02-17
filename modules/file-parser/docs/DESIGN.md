@@ -49,7 +49,7 @@ PDF, DOCX, XLSX, PPTX, PNG, JPG, TIFF supported. Other formats rejected with cle
 **ID**: [ ] `p1` `fdd-file-parser-component-rest-v1`
 
 <!-- fdd-id-content -->
-REST endpoints: `/file-parser/v1/info`, `/file-parser/v1/upload`, `/file-parser/v1/upload/markdown`, `/file-parser/v1/parse-local*`, `/file-parser/v1/parse-url*`
+REST endpoints: `/file-parser/v1/info`, `/file-parser/v1/upload`, `/file-parser/v1/upload/markdown`, `/file-parser/v1/parse-local*`
 <!-- fdd-id-content -->
 
 ### Parser Service
@@ -100,13 +100,11 @@ Converts parsed content to Markdown, preserves document structure, handles table
 - Unsupported format → 400 Bad Request
 - File too large → 413 Payload Too Large
 - Parsing failure → 500 Internal Server Error with details
-- URL fetch failure → 502 Bad Gateway
 
 ## 7. Dependencies
 
 - External parsing libraries for format support
 - Temporary file system for processing
-- HTTP client for URL parsing
 
 ## Appendix
 
@@ -115,3 +113,4 @@ Converts parsed content to Markdown, preserves document structure, handles table
 | Date | Version | Author | Changes |
 |------|---------|--------|---------|
 | 2026-02-09 | 0.1.0 | System | Initial DESIGN for cypilot validation |
+| 2026-02-17 | 0.2.0 | Security | Removed `/file-parser/v1/parse-url*` endpoints, HTTP client dependency, URL error handling, and `download_timeout_secs` config. Rationale: SSRF risk (issue #525) — parsing documents from caller-supplied URLs exposed an uncontrolled outbound HTTP path. Decision: remove the capability entirely rather than attempt mitigation. |

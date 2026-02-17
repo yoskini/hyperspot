@@ -100,31 +100,6 @@ pub fn register_routes(
         .error_415(openapi)
         .register(router, openapi);
 
-    // POST /file-parser/v1/parse-url - Parse a file from a URL
-    router = OperationBuilder::post("/file-parser/v1/parse-url")
-        .operation_id("file_parser.parse_url")
-        .summary("Parse a file from a URL")
-        .tag("File Parser")
-        .authenticated()
-        .require_license_features::<License>([])
-        .query_param_typed(
-            "render_markdown",
-            false,
-            "Render Markdown output if true (optional, default false)",
-            "boolean",
-        )
-        .json_request::<crate::api::rest::dto::ParseUrlRequest>(openapi, "URL to file")
-        .allow_content_types(&["application/json"])
-        .handler(handlers::parse_url)
-        .json_response_with_schema::<crate::api::rest::dto::ParsedDocResponseDto>(
-            openapi,
-            http::StatusCode::OK,
-            "Parsed document with optional markdown",
-        )
-        .standard_errors(openapi)
-        .error_415(openapi)
-        .register(router, openapi);
-
     // POST /file-parser/v1/parse-local/markdown - Parse a local file and stream Markdown
     router = OperationBuilder::post("/file-parser/v1/parse-local/markdown")
         .operation_id("file_parser.parse_local_markdown")
@@ -148,21 +123,6 @@ pub fn register_routes(
         .require_license_features::<License>([])
         .multipart_file_request("file", Some("File to parse and stream as Markdown"))
         .handler(handlers::upload_and_parse_markdown)
-        .text_response(http::StatusCode::OK, "Markdown stream", "text/markdown")
-        .standard_errors(openapi)
-        .error_415(openapi)
-        .register(router, openapi);
-
-    // POST /file-parser/v1/parse-url/markdown - Parse a file from a URL and stream Markdown
-    router = OperationBuilder::post("/file-parser/v1/parse-url/markdown")
-        .operation_id("file_parser.parse_url_markdown")
-        .summary("Parse a file from a URL and stream Markdown")
-        .tag("File Parser")
-        .authenticated()
-        .require_license_features::<License>([])
-        .json_request::<crate::api::rest::dto::ParseUrlRequest>(openapi, "URL to file")
-        .allow_content_types(&["application/json"])
-        .handler(handlers::parse_url_markdown)
         .text_response(http::StatusCode::OK, "Markdown stream", "text/markdown")
         .standard_errors(openapi)
         .error_415(openapi)

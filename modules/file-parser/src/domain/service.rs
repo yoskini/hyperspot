@@ -1,9 +1,7 @@
 use std::path::Path;
 use std::sync::Arc;
-use std::time::Duration;
 
 use bytes::Bytes;
-use modkit_http::HttpClient;
 use modkit_macros::domain_model;
 use tracing::{debug, info, instrument};
 
@@ -34,9 +32,6 @@ const EXTENSION_MIME_MAPPINGS: &[(&str, &str)] = &[
 pub struct FileParserService {
     parsers: Vec<Arc<dyn FileParserBackend>>,
     config: ServiceConfig,
-    /// Shared HTTP client for URL downloads (connection pooling).
-    /// `HttpClient` is `Clone + Send + Sync`, no external locking needed.
-    http_client: HttpClient,
 }
 
 /// Configuration for the file parser service
@@ -44,14 +39,12 @@ pub struct FileParserService {
 #[derive(Debug, Clone)]
 pub struct ServiceConfig {
     pub max_file_size_bytes: usize,
-    pub download_timeout_secs: u64,
 }
 
 impl Default for ServiceConfig {
     fn default() -> Self {
         Self {
             max_file_size_bytes: 100 * 1024 * 1024, // 100 MB
-            download_timeout_secs: 60,
         }
     }
 }
@@ -65,24 +58,9 @@ pub struct FileParserInfo {
 
 impl FileParserService {
     /// Create a new service with the given parsers
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the HTTP client cannot be built.
-    pub fn new(
-        parsers: Vec<Arc<dyn FileParserBackend>>,
-        config: ServiceConfig,
-    ) -> Result<Self, modkit_http::HttpError> {
-        let http_client = HttpClient::builder()
-            .timeout(Duration::from_secs(config.download_timeout_secs))
-            .max_body_size(config.max_file_size_bytes)
-            .build()?;
-
-        Ok(Self {
-            parsers,
-            config,
-            http_client,
-        })
+    #[must_use]
+    pub fn new(parsers: Vec<Arc<dyn FileParserBackend>>, config: ServiceConfig) -> Self {
+        Self { parsers, config }
     }
 
     /// Get information about available parsers
@@ -188,10 +166,6 @@ impl FileParserService {
             ));
         };
 
-        // NOTE: For direct uploads (parse_bytes), we do NOT validate MIME type.
-        // This allows uploads with filename="document.pdf" and Content-Type="application/octet-stream"
-        // to succeed. MIME validation is only enforced for parse_url (remote downloads).
-
         // Find parser
         let parser = self
             .find_parser_by_extension(&extension)
@@ -207,85 +181,6 @@ impl FileParserService {
             })?;
 
         debug!("Successfully parsed uploaded file");
-        Ok(document)
-    }
-
-    /// Parse a file from a URL
-    #[instrument(skip(self), fields(url = %url))]
-    pub async fn parse_url(&self, url: &url::Url) -> Result<ParsedDocument, DomainError> {
-        info!("Parsing file from URL");
-
-        // Extract extension from URL path
-        let path = Path::new(url.path());
-        let extension = path
-            .extension()
-            .and_then(|s| s.to_str())
-            .ok_or_else(|| DomainError::unsupported_file_type("no extension in URL"))?;
-
-        // Find parser
-        let parser = self
-            .find_parser_by_extension(extension)
-            .ok_or_else(|| DomainError::no_parser_available(extension))?;
-
-        // Download file
-        debug!("Downloading file from URL");
-        let response = self
-            .http_client
-            .get(url.as_str())
-            .send()
-            .await
-            .map_err(|e| {
-                tracing::error!(?e, "FileParserService: failed to download file");
-                DomainError::download_error(format!("Failed to download file: {e}"))
-            })?;
-
-        if !response.status().is_success() {
-            let status = response.status();
-            tracing::error!(?status, "FileParserService: HTTP error during download");
-            return Err(DomainError::download_error(format!("HTTP error: {status}")));
-        }
-
-        let content_type = response
-            .headers()
-            .get(http::header::CONTENT_TYPE)
-            .and_then(|v| v.to_str().ok())
-            .map(ToString::to_string);
-
-        // Validate MIME type if present
-        if let Some(ref ct) = content_type {
-            Self::validate_mime_type(extension, ct)?;
-        }
-
-        let bytes = response.bytes().await.map_err(|e| {
-            tracing::error!(?e, "FileParserService: failed to read response bytes");
-            DomainError::download_error(format!("Failed to read response: {e}"))
-        })?;
-
-        // Defense-in-depth: HttpClient's max_body_size should enforce this limit during
-        // download, but we check again here in case the client config changes or as a
-        // safeguard against implementation differences.
-        if bytes.len() > self.config.max_file_size_bytes {
-            return Err(DomainError::invalid_request(format!(
-                "File size {} exceeds maximum of {} bytes",
-                bytes.len(),
-                self.config.max_file_size_bytes
-            )));
-        }
-
-        // Parse the downloaded file
-        let file_name = path
-            .file_name()
-            .and_then(|s| s.to_str())
-            .map(ToString::to_string);
-        let document = parser
-            .parse_bytes(file_name.as_deref(), content_type.as_deref(), bytes)
-            .await
-            .map_err(|e| {
-                tracing::error!(?e, "FileParserService: parse_url failed during parsing");
-                e
-            })?;
-
-        debug!("Successfully parsed file from URL");
         Ok(document)
     }
 
@@ -305,49 +200,6 @@ impl FileParserService {
             .iter()
             .find(|(_, mime_type)| *mime_type == essence)
             .map(|(ext, _)| (*ext).to_owned())
-    }
-
-    /// Validate MIME type against expected type for extension
-    fn validate_mime_type(extension: &str, content_type: &str) -> Result<(), DomainError> {
-        // Parse MIME type
-        let mime: mime::Mime = content_type.parse().map_err(|_| {
-            DomainError::invalid_request(format!("Invalid content-type: {content_type}"))
-        })?;
-
-        let mime_str = mime.essence_str();
-        let extension_lower = extension.to_lowercase();
-
-        // Find expected MIME type(s) for this extension
-        let expected_mimes: Vec<&str> = EXTENSION_MIME_MAPPINGS
-            .iter()
-            .filter(|(ext, _)| *ext == extension_lower.as_str())
-            .map(|(_, mime_type)| *mime_type)
-            .collect();
-
-        if expected_mimes.is_empty() {
-            // Unknown extension - allow it
-            return Ok(());
-        }
-
-        // Check if actual MIME matches any expected MIME
-        // Special case: also accept application/xhtml+xml for html
-        let is_valid = expected_mimes.contains(&mime_str)
-            || (extension_lower == "html" && mime_str == "application/xhtml+xml")
-            || (extension_lower == "htm" && mime_str == "application/xhtml+xml");
-
-        if !is_valid {
-            tracing::warn!(
-                extension = extension,
-                expected = ?expected_mimes,
-                actual = mime_str,
-                "MIME type mismatch"
-            );
-            return Err(DomainError::invalid_request(format!(
-                "Content-Type {mime_str} does not match expected type(s) {expected_mimes:?} for .{extension}"
-            )));
-        }
-
-        Ok(())
     }
 
     /// Find a parser by file extension

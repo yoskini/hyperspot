@@ -36,10 +36,6 @@ http = { workspace = true }
 # Time handling
 time = { workspace = true }
 
-# URL parsing and HTTP client
-url = { workspace = true }
-modkit-http = { workspace = true }
-
 # UUID support
 uuid = { workspace = true }
 
