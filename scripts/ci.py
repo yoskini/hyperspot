@@ -365,7 +365,7 @@ def cmd_e2e(args):
                 "--bin",
                 "hyperspot-server",
                 "--features",
-                "users-info-example,tenant-resolver-example",
+                "users-info-example,static-tenants,static-authz",
                 "--",
                 "--config",
                 "config/e2e-local.yaml",
