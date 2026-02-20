@@ -59,6 +59,7 @@ modkit = { package = "cf-modkit", version = "0.2.0", path = "../libs/modkit" }
 gts-id = "0.8.1"
 gts = "0.8.1"
 gts-macros = "0.8.1"
+schemars = { version = "1.2", features = ["derive"] }
 
 # Dev dependencies for lint tests
 sea-orm = "1.0"
